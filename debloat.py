@@ -10,6 +10,11 @@ KEEP = [
     "longitude",
     "datetime_from_utc",
     "parameter",
+    "value",
+    "location_id",
+    "sensor_id",
+    "units",
+    "percent_complete",
 ]
 
 rows_read = rows_written = mobile_dropped = empty_dropped = 0

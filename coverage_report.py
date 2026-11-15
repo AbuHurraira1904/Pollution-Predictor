@@ -29,10 +29,9 @@ def main():
             "first_day": days["date"].min(),
             "last_valid_day": days.loc[valid, "date"].max(),
             "valid_days": int(valid.sum()),
-            # BUG 1: divides by len(days) instead of window_days, inflating coverage for new stations
-            "coverage": round(valid.sum() / len(days), 2),
+            "coverage": round(valid.sum() / window_days, 2),
             "smog_season_coverage": round(valid[smog_season].mean(), 2),
-            # TODO: calculate longest_gap_days
+            "longest_gap_days": int((~valid).astype(int).groupby(valid.cumsum()).sum().max()),
         })
     report = pd.DataFrame(rows).sort_values("valid_days", ascending=False)
 
@@ -45,12 +44,13 @@ def main():
 
     cutoff = last_day - pd.Timedelta(days=MAX_DAYS_STALE)
     chosen = report[
-        # BUG 2: <= selects stale cities instead of recently active ones (>=)
-        (report["coverage"] >= MIN_COVERAGE) & (report["last_valid_day"] <= cutoff)
+        (report["coverage"] >= MIN_COVERAGE) & (report["last_valid_day"] >= cutoff)
     ]["city"].tolist()
 
     config.CITIES_FILE.write_text(json.dumps({"cities": chosen}, indent=2))
     print(f"\nwrote {config.CITIES_FILE.name}: {chosen}")
+    if not chosen:
+        print("no city passed, lower MIN_COVERAGE at the top of this file")
 
 
 if __name__ == "__main__":

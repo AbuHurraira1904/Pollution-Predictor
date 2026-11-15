@@ -91,8 +91,8 @@ def load_sensors(cities, refresh):
     if config.SENSOR_CACHE.exists():
         cache = json.loads(config.SENSOR_CACHE.read_text())
         age = datetime.now(timezone.utc) - datetime.fromisoformat(cache["fetched_at"])
-        # BUG 1: forgot to check if cache["cities"] matches requested cities, returning stale city list
-        if not refresh and age < timedelta(days=config.SENSOR_CACHE_DAYS):
+        same_cities = cache["cities"] == sorted(cities)
+        if same_cities and not refresh and age < timedelta(days=config.SENSOR_CACHE_DAYS):
             return cache["sensors"]
 
     print("refreshing the sensor list")
@@ -154,14 +154,15 @@ def merge_into_raw(rows):
     combined = pd.concat([old, new], ignore_index=True)
     combined["time"] = config.parse_time(combined["datetime_from_utc"])
     combined = combined.dropna(subset=["time"])
-    # BUG 2: keep="first" keeps old cached rows instead of overwriting with fresh API values (keep="last")
-    combined = combined.drop_duplicates(subset=["sensor_id", "time"], keep="first")
+    combined = combined.drop_duplicates(subset=["sensor_id", "time"], keep="last")
     combined = combined.sort_values(["sensor_id", "time"])
     combined["datetime_from_utc"] = combined["time"].dt.strftime("%Y-%m-%dT%H:%M:%SZ")
     combined = combined.drop(columns="time")
 
     shutil.copy2(config.RAW_FILE, config.BACKUP_FILE)
-    combined.to_csv(config.RAW_FILE, index=False, compression="gzip")
+    temp_file = config.RAW_FILE.with_suffix(".tmp")
+    combined.to_csv(temp_file, index=False, compression="gzip")
+    os.replace(temp_file, config.RAW_FILE)
     print(f"dataset went from {len(old):,} to {len(combined):,} rows")
 
 

@@ -89,3 +89,26 @@ def daily_by_city(raw):
     if not frames:
         raise SystemExit("no usable data after cleaning")
     return pd.concat(frames, ignore_index=True)
+
+def main():
+    cities = config.load_cities()
+    raw = load_raw()
+    raw = raw[raw["city"].isin(cities)]
+    daily = daily_by_city(raw)
+    number_columns = daily.select_dtypes("number").columns
+    daily[number_columns] = daily[number_columns].round(2)
+
+    temp_file = config.CLEAN_FILE.with_suffix(".tmp")
+    daily.to_csv(temp_file, index=False, compression="gzip")
+    os.replace(temp_file, config.CLEAN_FILE)
+
+    print(f"saved {len(daily):,} city-days to {config.CLEAN_FILE.name}")
+    print(daily.groupby("city").agg(
+        days=("date", "size"),
+        valid_pm25_days=("pm25_mean", "count"),
+        last_date=("date", "max"),
+    ).to_string())
+
+
+if __name__ == "__main__":
+    main()

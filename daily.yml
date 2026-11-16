@@ -1,0 +1,41 @@
+name: daily-update
+
+on:
+  schedule:
+    - cron: "30 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency: daily-update
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Download dataset
+        run: |
+          mkdir -p data
+          gh release download data --pattern "openaq_pakistan_slim.csv.gz" --dir data --clobber
+      - name: Run pipeline
+        run: python run_daily.py
+        env:
+          OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
+      - name: Upload dataset
+        run: gh release upload data data/openaq_pakistan_slim.csv.gz --clobber
+      - name: Commit cleaned data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add cities.json data/clean_daily.csv.gz data/sensor_cache.json
+          git diff --cached --quiet || git commit -m "Daily update $(date -u +%F)"
+          git push

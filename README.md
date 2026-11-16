@@ -61,3 +61,17 @@ Cities covered: Lahore, Karachi, Islamabad, Rawalpindi, Peshawar, Faisalabad, Mu
 | `compress.py` | Re-compresses data files |
 | `daily.yml` | GitHub Actions workflow for the daily update |
 
+## EDA Notebook
+
+`EDA.ipynb` explores the cleaned data. It covers:
+
+- Dataset overview and missing value audit
+- Data availability heatmap by city and month
+- PM2.5 distributions, boxplots and health category breakdown (US EPA + WHO guideline)
+- Time series with 7-day rolling mean
+- Seasonal analysis (smog season Oct–Feb vs rest of year)
+- Day-of-week patterns, correlations between cities and variables
+- Autocorrelation and day-to-day change (baseline error for forecasting)
+- PM2.5 / PM10 ratio trends
+
+Run it after `fetch_365.py` and `run_daily.py` so `data/clean_daily.csv.gz` exists.
